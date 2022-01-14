@@ -1,0 +1,9 @@
+"0","labor <- read_excel(""data/labor.xlsx"") %>%
+  mutate(production  = production/ 1000000,
+         wage = wage / 1000)
+"
+"2","New names:
+* `` -> ...6
+* `` -> ...7
+* `` -> ...8
+"

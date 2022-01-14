@@ -1,0 +1,46 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Outline:
+
+1. microeconomics vs macroeconomics
+2. regression analysis vs causal inference
+3. types of microdata
+
+
+```{r}
+install.packages(c("lmtest", "sandwich", "estimatr","olsrr"))
+```
+
+```{r}
+library(tidyverse)
+library(readxl)
+library(lmtest)
+library(sandwich)
+library(estimatr)
+library(olsrr)
+```
+
+
+```{r}
+labor <- read_excel("data/labor.xlsx") %>%
+  mutate(production  = production/ 1000000,
+         wage = wage / 1000)
+```
+```{r}
+with(labor, plot(log(production), log(wage)))
+```
+
+```{r}
+m1 <- lm(log(labour) ~ log(capital) + log(production) + log(wage), data = labor)
+summary(m1)
+plot(m1)
+```
+
+```{r}
+m1_r <- lm_robust(log(labour) ~ log(capital) + log(production) + log(wage), data = labor)
+summary(m1_r)
+```
+
