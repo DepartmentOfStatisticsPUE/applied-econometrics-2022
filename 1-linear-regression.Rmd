@@ -42,6 +42,10 @@ with(labor, plot(wage, labour))
 
 First model
 
+$$
+\text{labour} = \beta_0 + \beta_1\text{capital} + \beta_2\text{production} + \beta_3\text{wage} + \epsilon
+$$
+
 ```{r}
 m1 <- lm(labour ~ I(capital/1000) + I(production/100000) + I(wage/1000), data = labor)
 summary(m1)
@@ -59,17 +63,49 @@ y <- 1 + 5*x + rnorm(n)
 m2 <- lm(y~x)
 plot(m2)
 ```
+$$
+\text{labour} = \alpha \times \text{capital}^{\beta_1} \times \text{production}^{\beta_2}\times\text{wage}^{\beta_3}\times\epsilon
+$$
+log-transformed model is given by the following formula
 
-
-
+$$
+\log(\text{labour}) = \gamma + \beta_1\log(\text{capital}) + \beta_2\log(\text{production}) + \beta_3\log(\text{wage}) + \psi
+$$
 ```{r}
-m1 <- lm(log(labour) ~ log(capital) + log(production) + log(wage), data = labor)
-summary(m1)
-plot(m1)
+m3 <- lm(log(labour) ~ log(capital) + log(production) + log(wage), data = labor)
+summary(m3)
+plot(m3)
 ```
 
+Verification of assumptions using lmtest package
+
 ```{r}
-m1_r <- lm_robust(log(labour) ~ log(capital) + log(production) + log(wage), data = labor)
+lmtest::dwtest(m3) ## correlation of residuals (incorrect for our case!!!!)
+lmtest::bptest(m3) ## heteroskedasticity test 
+shapiro.test(resid(m3)) ## test for normality of residuals
+```
+
+Verification of assumptions using olsrr package
+
+```{r}
+ols_test_normality(m3) ## testing for normality
+ols_test_breusch_pagan(m3) ## test for Heteroskedasticity
+```
+
+To estimate model with heteroskedastic-robust standard errors you may use lm_robust function
+
+```{r}
+m1_r <- lm_robust(log(labour) ~ log(capital) + log(production) + log(wage), 
+                  data = labor, se_type = "HC2")
 summary(m1_r)
+```
+Do the same using sandwich package
+
++ coeftest -- is a function from lmtest package
++ vcovHC -- is a function from sandwich package (for calculation of HC robust standard errors)
+
+
+```{r}
+coeftest(m3, vcov = vcovHC(m3, type = "HC2"))
 ```
 
