@@ -15,23 +15,52 @@ install.packages(c("lmtest", "sandwich", "estimatr","olsrr"))
 ```
 
 ```{r}
-library(tidyverse)
-library(readxl)
-library(lmtest)
-library(sandwich)
-library(estimatr)
-library(olsrr)
+library(tidyverse) ## data processing
+library(readxl) ## reading excel files
+library(lmtest) ## tests for lm (normality, linearity, residual variance)
+library(olsrr) ## more user friendly packages
+library(sandwich) ## robust standard errors
+library(estimatr) ## provides function lm_robust (this package is fast; C++)
+```
+
+Data from the moodle platform
+
+```{r}
+labor <- read_excel("data/labor.xlsx") 
+summary(labor)
+```
+```{r}
+with(labor, hist(labour, breaks = "fd"))
+with(labor, hist(production, breaks = "fd"))
+with(labor, hist(capital, breaks = "fd"))
+with(labor, hist(wage, breaks = "fd"))
+
+with(labor, plot(production, labour))
+with(labor, plot(capital, labour))
+with(labor, plot(wage, labour))
+```
+
+First model
+
+```{r}
+m1 <- lm(labour ~ I(capital/1000) + I(production/100000) + I(wage/1000), data = labor)
+summary(m1)
+```
+```{r}
+plot(m1)
+```
+Reference plots
+
+```{r}
+set.seed(123)
+n <- 1000
+x <- rchisq(n, df =2 )
+y <- 1 + 5*x + rnorm(n)
+m2 <- lm(y~x)
+plot(m2)
 ```
 
 
-```{r}
-labor <- read_excel("data/labor.xlsx") %>%
-  mutate(production  = production/ 1000000,
-         wage = wage / 1000)
-```
-```{r}
-with(labor, plot(log(production), log(wage)))
-```
 
 ```{r}
 m1 <- lm(log(labour) ~ log(capital) + log(production) + log(wage), data = labor)

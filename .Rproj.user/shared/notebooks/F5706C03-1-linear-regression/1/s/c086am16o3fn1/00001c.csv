@@ -1,0 +1,4 @@
+"0","with(labor, plot(production, labour))
+with(labor, plot(capital, labour))
+"
+"0","with(labor, plot(wage, labour))"
