@@ -1,5 +1,5 @@
-"0","summary(m1)
-"
+"0","m1 <- lm(labour ~ I(capital/1000) + I(production/100000) + I(wage/1000), data = labor)"
+"0","summary(m1)"
 "1","
 Call:
 "

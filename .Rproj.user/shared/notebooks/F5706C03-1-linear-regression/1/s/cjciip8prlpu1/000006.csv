@@ -1,6 +1,0 @@
-"0","library(tidyverse) ## data processing"
-"0","library(readxl) ## reading excel files"
-"0","library(lmtest) ## tests for lm (normality, linearity, residual variance)"
-"0","library(olsrr) ## more user friendly packages"
-"0","library(sandwich) ## robust standard errors"
-"0","library(estimatr) ## provides function lm_robust (this package is fast; C++)"

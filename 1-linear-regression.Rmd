@@ -92,6 +92,8 @@ ols_test_normality(m3) ## testing for normality
 ols_test_breusch_pagan(m3) ## test for Heteroskedasticity
 ```
 
+Note that results from `lmtest::bptest` and `ols_test_breusch_pagan` differ. This is because these two functions does the test in a different way, i.e. `ols_test_breusch_pagan` uses thest that assumes error terms to be normally distributed, while `lmtest::bptest` does not assume that.
+
 To estimate model with heteroskedastic-robust standard errors you may use lm_robust function
 
 ```{r}
@@ -99,6 +101,7 @@ m1_r <- lm_robust(log(labour) ~ log(capital) + log(production) + log(wage),
                   data = labor, se_type = "HC2")
 summary(m1_r)
 ```
+
 Do the same using sandwich package
 
 + coeftest -- is a function from lmtest package
