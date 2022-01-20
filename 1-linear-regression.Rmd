@@ -12,6 +12,7 @@ Outline:
 
 ```{r}
 install.packages(c("lmtest", "sandwich", "estimatr","olsrr"))
+install.packages("laeken")
 ```
 
 ```{r}
@@ -21,6 +22,7 @@ library(lmtest) ## tests for lm (normality, linearity, residual variance)
 library(olsrr) ## more user friendly packages
 library(sandwich) ## robust standard errors
 library(estimatr) ## provides function lm_robust (this package is fast; C++)
+library(laeken)
 ```
 
 Data from the moodle platform
@@ -28,6 +30,7 @@ Data from the moodle platform
 ```{r}
 labor <- read_excel("data/labor.xlsx") 
 summary(labor)
+head(labor)
 ```
 ```{r}
 with(labor, hist(labour, breaks = "fd"))
@@ -111,4 +114,11 @@ Do the same using sandwich package
 ```{r}
 coeftest(m3, vcov = vcovHC(m3, type = "HC2"))
 ```
+
+Robust standard errors: clustered/panel data
+
+
+
+
+
 
