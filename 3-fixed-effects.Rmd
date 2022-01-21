@@ -1,0 +1,82 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+i - observation (e.g. advertisement)
+j - cluster: district of Poznan
+
+$$
+y_i = \alpha_j + \beta x_i + \epsilon_i
+$$
+
+fixed effects + clustered standard errors
+
+https://cran.r-project.org/web/packages/fixest/index.html
+https://cran.r-project.org/web/packages/alpaca/index.html
+https://cran.r-project.org/web/packages/bife/index.html
+
+
+```{r}
+install.packages("fixest")
+```
+
+```{r}
+library(tidyverse) ## data processing
+library(readxl) ## reading excel files
+library(lmtest) ## tests for lm (normality, linearity, residual variance)
+library(estimatr) ## provides function lm_robust (this package is fast; C++)
+library(fixest) ## for fixed effects
+```
+
+```{r}
+pzn_rent <- read_excel("data/rent-poznan.xlsx")
+
+pzn_rent_subset <- pzn_rent %>%
+  add_count(quarter, name = "quarter_count") %>%
+  filter(quarter_count >= 50) %>%
+  filter(price >= 500, price <= 15000, flat_area >= 15, flat_area <= 250)
+  
+pzn_rent_subset
+```
+
+LM Robust to estimate fixed effects model
+
+```{r}
+model_pzn_fiex <- lm_robust(formula = price ~ flat_area + flat_rooms + individual + flat_furnished +
+                             flat_for_students +  flat_balcony,
+                           data = pzn_rent_subset,
+                           fixed_effects = ~ quarter,
+                           se_type = "HC2")
+
+model_pzn_fiex
+```
+
+```{r}
+model_pzn_fiex$fixed_effects
+```
+
+We may use the same variable for calculating fixed effect and clustered standard errors
+
+```{r}
+model_pzn_cr <- lm_robust(formula = price ~ flat_area + flat_rooms + individual + flat_furnished +
+                             flat_for_students +  flat_balcony,
+                           data = pzn_rent_subset,
+                           fixed_effects = ~ quarter,
+                           cluster = quarter,
+                           se_type = "CR2")
+
+model_pzn_cr
+```
+
+```{r}
+model_pzn_cr$fixed_effects
+```
+
+```{r}
+model_pzn_fixest <- feols(fml = price ~ flat_area + flat_rooms + individual + flat_furnished +
+                                    flat_for_students +  flat_balcony | quarter, 
+                          data = pzn_rent_subset)
+model_pzn_fixest
+```
+
