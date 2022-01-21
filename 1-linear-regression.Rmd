@@ -12,7 +12,7 @@ Outline:
 
 ```{r}
 install.packages(c("lmtest", "sandwich", "estimatr","olsrr"))
-install.packages("laeken")
+install.packages("nlstools")
 ```
 
 ```{r}
@@ -22,7 +22,7 @@ library(lmtest) ## tests for lm (normality, linearity, residual variance)
 library(olsrr) ## more user friendly packages
 library(sandwich) ## robust standard errors
 library(estimatr) ## provides function lm_robust (this package is fast; C++)
-library(laeken)
+library(nlstools)
 ```
 
 Data from the moodle platform
@@ -118,7 +118,33 @@ coeftest(m3, vcov = vcovHC(m3, type = "HC2"))
 Robust standard errors: clustered/panel data
 
 
+Nonlinear
 
+```{r}
+power_df <- read_excel("data/power_function.xlsx", 
+                       range = cell_cols("A:E"), 
+                       .name_repair = tolower)
+
+with(power_df, plot(input1, output))
+
+m1 <- lm(formula = log(output) ~ log(input1) + log(input2) + log(input3),
+         data = power_df)
+summary(m1)
+plot(m1)
+```
+
+
+```{r}
+g <- nls(formula = output ~ a * input1 ^ b * input2 ^ c * input3 ^ d,
+         data = power_df,
+         start = list(a = 2,
+                      b = 0.5,
+                      c = 0.5,
+                      d = 0.5))
+
+summary(g)
+
+```
 
 
 
