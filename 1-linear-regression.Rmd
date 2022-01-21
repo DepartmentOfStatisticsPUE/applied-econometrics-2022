@@ -12,7 +12,6 @@ Outline:
 
 ```{r}
 install.packages(c("lmtest", "sandwich", "estimatr","olsrr"))
-install.packages("nlstools")
 ```
 
 ```{r}
@@ -22,7 +21,6 @@ library(lmtest) ## tests for lm (normality, linearity, residual variance)
 library(olsrr) ## more user friendly packages
 library(sandwich) ## robust standard errors
 library(estimatr) ## provides function lm_robust (this package is fast; C++)
-library(nlstools)
 ```
 
 Data from the moodle platform
@@ -118,33 +116,56 @@ coeftest(m3, vcov = vcovHC(m3, type = "HC2"))
 Robust standard errors: clustered/panel data
 
 
-Nonlinear
+1. cluster -- poviats, gminas, a class in school, households
+2. panel data -- companies between 2010-2021; balanced or unbalanced
+
 
 ```{r}
-power_df <- read_excel("data/power_function.xlsx", 
-                       range = cell_cols("A:E"), 
-                       .name_repair = tolower)
+pzn_rent <- read_excel("data/rent-poznan.xlsx")
 
-with(power_df, plot(input1, output))
+pzn_rent_subset <- pzn_rent %>%
+  add_count(quarter, name = "quarter_count") %>%
+  filter(quarter_count >= 50) %>%
+  filter(price >= 500, price <= 15000, flat_area >= 15, flat_area <= 250)
+  
+pzn_rent_subset
+```
 
-m1 <- lm(formula = log(output) ~ log(input1) + log(input2) + log(input3),
-         data = power_df)
-summary(m1)
-plot(m1)
+```{r}
+model_pzn <- lm(formula = price ~ flat_area + flat_rooms + individual + flat_furnished + 
+                  flat_for_students +  flat_balcony,
+                data = pzn_rent_subset)
+summary(model_pzn)
+plot(model_pzn)
+```
+
+We calculate standard errors using two formulas: HC2 and CR2.
+
+```{r}
+model_pzn_hc2 <- lm_robust(formula = price ~ flat_area + flat_rooms + individual + flat_furnished +
+                             flat_for_students +  flat_balcony,
+                           data = pzn_rent_subset,
+                           se_type = "HC2")
+
+model_pzn_cr2 <- lm_robust(formula = price ~ flat_area + flat_rooms + individual + flat_furnished +
+                             flat_for_students +  flat_balcony,
+                           data = pzn_rent_subset,
+                           se_type = "CR2",
+                           clusters = quarter)
+
+model_pzn_hc2
+model_pzn_cr2
 ```
 
 
 ```{r}
-g <- nls(formula = output ~ a * input1 ^ b * input2 ^ c * input3 ^ d,
-         data = power_df,
-         start = list(a = 2,
-                      b = 0.5,
-                      c = 0.5,
-                      d = 0.5))
-
-summary(g)
-
+coeftest(model_pzn, vcov = vcovCL(model_pzn, cluster = ~ quarter, type = "HC2"))
 ```
+
+
+if your data is cross-section data -> HC2
+if your data is a time series data -> HAC2 (implemented in sandwich packace)
+if your data is clustered / panels data -> CR2 
 
 
 

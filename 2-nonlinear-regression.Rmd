@@ -1,0 +1,46 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+install.packages("nlstools")
+```
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(nlstools)
+```
+
+Nonlinear
+
+```{r}
+power_df <- read_excel("data/power_function.xlsx", 
+                       range = cell_cols("A:E"), 
+                       .name_repair = tolower)
+
+with(power_df, plot(input1, output))
+
+m1 <- lm(formula = log(output) ~ log(input1) + log(input2) + log(input3),
+         data = power_df)
+summary(m1)
+plot(m1)
+```
+
+
+```{r}
+g <- nls(formula = output ~ a * input1 ^ b * input2 ^ c * input3 ^ d,
+         data = power_df,
+         start = list(a = 2,
+                      b = 0.5,
+                      c = 0.5,
+                      d = 0.5))
+
+summary(g)
+
+```
+
+
+
