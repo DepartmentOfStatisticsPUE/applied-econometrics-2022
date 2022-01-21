@@ -27,6 +27,7 @@ library(readxl) ## reading excel files
 library(lmtest) ## tests for lm (normality, linearity, residual variance)
 library(estimatr) ## provides function lm_robust (this package is fast; C++)
 library(fixest) ## for fixed effects
+library(sandwich)
 ```
 
 ```{r}
@@ -77,6 +78,10 @@ model_pzn_cr$fixed_effects
 model_pzn_fixest <- feols(fml = price ~ flat_area + flat_rooms + individual + flat_furnished +
                                     flat_for_students +  flat_balcony | quarter, 
                           data = pzn_rent_subset)
-model_pzn_fixest
+
+print(model_pzn_fixest)
 ```
+
+We cannot reproduce lm_robust as this package only allow HC1 / CR1 aka "stata" in lm_robust. We cannot use HC2/RC2 using sandwich package as `'hatvalues' is not implemented for estimations with fixed-effects.`
+
 
