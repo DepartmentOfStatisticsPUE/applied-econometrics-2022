@@ -6,34 +6,50 @@ output: html_notebook
 
 ```{r}
 install.packages("nlstools")
+install.packages("janitor")
 ```
 
 ```{r}
 library(readxl)
 library(tidyverse)
-library(nlstools)
+library(nlstools) ## to process nls results
+library(janitor) ## to clean column names
 ```
+
 
 Nonlinear
 
 ```{r}
-power_df <- read_excel("data/power_function.xlsx", 
+power_df <- read_excel(path = "data/power_function.xlsx", 
                        range = cell_cols("A:E"), 
-                       .name_repair = tolower)
+                       .name_repair = make_clean_names)
+power_df
+```
 
-with(power_df, plot(input1, output))
+$$
+output = A I_1^b I_2^c I_3^d
+$$
+$$
+\log(output) = \log(A) + b\log(I_1) + c\log(I_2) + d\log(I_3)
+$$
 
+```{r}
 m1 <- lm(formula = log(output) ~ log(input1) + log(input2) + log(input3),
          data = power_df)
 summary(m1)
 plot(m1)
 ```
 
+$$
+y = f(x) + \epsilon
+$$
+
+nls - non-linear least squares
 
 ```{r}
-g <- nls(formula = output ~ a * input1 ^ b * input2 ^ c * input3 ^ d,
+g <- nls(formula = output ~ A*input1^b*input2^c*input3^d,
          data = power_df,
-         start = list(a = 2,
+         start = list(A = 10,
                       b = 0.5,
                       c = 0.5,
                       d = 0.5))
@@ -41,6 +57,51 @@ g <- nls(formula = output ~ a * input1 ^ b * input2 ^ c * input3 ^ d,
 summary(g)
 
 ```
+
+Starting points for model parameters!!! 
+
+1. if possible use as a starting points results from linearized model
+
+```{r}
+g2 <- nls(formula = output ~ A*input1^b*input2^c*input3^d,
+          data = power_df,
+          start = list(A = exp(coef(m1)[1]),
+                       b = coef(m1)[2],
+                       c = coef(m1)[3],
+                       d = coef(m1)[4]), 
+          control = nls.control(maxiter = 100))
+
+summary(g2)
+```
+
+2. grid search
+
+```{r}
+grid_table <- expand.grid(A = seq(0, 15, 1), b = seq(0.1, 0.9, 0.1), c = seq(0.1, 0.9, 0.1), d = seq(0.1,0.9,0.1))
+```
+
+```{r}
+g_resids <- nlstools::nlsResiduals(g)
+plot(g_resids)
+```
+
+```{r}
+test.nlsResiduals(g_resids)
+```
+
+leave-one-out estimation procedure [it calculates 23 models]
+
+```{r}
+summary(nlsJack(g2))
+```
+
+Be careful about the following points:
+
+1. starting points -- you need to run your model with different set of starting points to see how sensitive are your estimates
+2. check for influential observations (e.g. you can use leave-one-out metod / JackKnife method)
+3. be aware of different estimation procedures (different algorithms) -- gauss-newton method, marquardt-levenberg (https://cran.r-project.org/web/packages/marqLevAlg/index.html)
+
+
 
 
 
