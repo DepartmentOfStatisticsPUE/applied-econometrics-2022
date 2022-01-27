@@ -1,0 +1,169 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+Topics:
+
+1. marginal effects -- margins
+2. robust / resistance regression -- robustbase
+3. sample selection models -- sampleSelection
+4. spatial analysis tmap
+
+
+```{r}
+install.packages("robustbase")
+install.packages("sampleSelection")
+install.packages("margins")
+install.packages("tmap")
+```
+
+
+```{r}
+library(robustbase)
+library(sampleSelection)
+library(readxl)
+library(tidyverse)
+library(olsrr)
+library(sandwich)
+library(lmtest)
+library(margins)
+library(tmap)
+library(sf)
+```
+
+
+```{r}
+pzn_rent <- read_excel("data/rent-poznan.xlsx")
+
+set.seed(123)
+pzn_rent_subset <- pzn_rent %>%
+  add_count(quarter, name = "quarter_count") %>%
+  filter(quarter_count >= 50) %>%
+  filter(price >= 500, price <= 15000, flat_area >= 15, flat_area <= 250) %>%
+  sample_n(3000)
+  
+pzn_rent_subset
+```
+```{r}
+model_pzn <- lm(formula = price ~ flat_area + flat_rooms + individual + flat_furnished + 
+                  flat_for_students +  flat_balcony,
+                data = pzn_rent_subset)
+summary(model_pzn)
+plot(model_pzn)
+```
+
+```{r}
+ols_plot_cooksd_chart(model_pzn)
+```
+
+```{r}
+ols_plot_dfbetas(model_pzn)
+```
+
+```{r}
+model_pzn_rob <- robustbase::lmrob(formula = price ~ flat_area + flat_rooms + individual + flat_furnished + 
+                               flat_for_students +  flat_balcony,
+                               data = pzn_rent_subset,
+                               method = "MM")
+summary(model_pzn_rob)
+```
+
+```{r}
+plot(model_pzn_rob$model$price, model_pzn_rob$rweights)
+```
+
+
+
+```{r}
+data.frame(nonrobust = coef(model_pzn), robust = coef(model_pzn_rob))
+```
+
+
+Sample selection models:
+
+basic selection model: Heckman's model
+more advanced econometric models: copula selection models
+more statistical approach: not missing at random models
+
+
+
+
+Generate sample data
+
+
+```{r}
+set.seed(123)
+n <- 1000 
+x1 <- rnorm(n = n, mean = 0, sd = 1)
+x2 <- rnorm(n = n, mean = 0, sd = 1)
+errors <- MASS::mvrnorm(n = n, mu = c(0, 0), 
+                        Sigma = matrix(c(1, 0.5, 0.5, 2), nrow=2),
+                        empirical = T)
+
+selmodel <- data.frame(r = 1 + x1 + x2 + errors[, 1],
+                       y = 1 + x1 + errors[, 2])
+
+selmodel$sel <- selmodel$r > 0
+
+selection(selection = sel ~ x1 + x2,outcome = y ~ x1, data = selmodel) |> 
+  summary()
+```
+
+
+Spatial
+
+```{r}
+df_salaries <- read_excel("data/data-salaries.xlsx", sheet = 2) %>%
+  dplyr::select(id = Kod, name = Nazwa, salaries = Wartosc)
+
+df_real <- read_excel("data/data-real-estate.xlsx", sheet = 2) %>%
+  dplyr::select(id = Kod, name = Nazwa, real = Wartosc)
+
+df_model <- df_salaries %>%
+  inner_join(df_real) %>%
+  filter(real > 0)
+
+
+plot((df_model$salaries), (df_model$real))
+
+model1 <- lm(formula = log(real) ~ log(salaries), data = df_model)
+df_model$resids <- resid(model1)
+plot(model1)
+```
+
+```{r}
+powiats <- st_read(dsn = "data/mapy/powiaty.shp")
+woj <- st_read(dsn = "data/mapy/woj.dbf")
+plot(powiats$geometry)
+plot(woj$geometry, add = T, lwd = 2)
+```
+
+```{r}
+powiats %>% 
+  dplyr::select(id=jpt_kod_je) %>%
+  left_join(df_model %>%
+              mutate(id = substr(id, 1,4))) -> for_plot
+```
+
+```{r}
+tm_shape(for_plot) +
+  tm_polygons(col = "resids", style = "jenks") +
+  tm_shape(woj) + 
+  tm_borders(lwd = 2)
+```
+
+Generating correlated data
+
+```{r}
+library(MASS)
+m <- 2
+sigma <- diag(c(1,2), 2, 2)
+sigma[1,2] <- sigma[2,1] <- 0.5
+fake_data <- MASS::mvrnorm(n = 2000, mu=rep(0, m), Sigma = sigma, empirical = T)
+cor(fake_data)
+plot(fake_data)
+
+```
+
+
