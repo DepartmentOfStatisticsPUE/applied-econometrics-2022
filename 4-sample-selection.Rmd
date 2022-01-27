@@ -122,14 +122,25 @@ df_real <- read_excel("data/data-real-estate.xlsx", sheet = 2) %>%
 
 df_model <- df_salaries %>%
   inner_join(df_real) %>%
-  filter(real > 0)
+  filter(real > 0) %>%
+  mutate(woj = substr(id,1,2),
+         cities = str_detect(name, "m\\."),
+         capitals = str_detect(name, "Białystok|Bydgoszcz|Gdańsk|Gorzów Wielkopolski|Katowice|Kielce|Kraków|Lublin|Łódź|Olsztyn|Opole|Poznań|Rzeszów|Szczecin|Toruń|Warszawa|Wrocław|Zielona Góra"))
 
+df_model %>%
+  filter(capitals)
 
+```
+
+```{r}
 plot((df_model$salaries), (df_model$real))
+```
 
-model1 <- lm(formula = log(real) ~ log(salaries), data = df_model)
+```{r}
+model1 <- lm(formula = log(real) ~ log(salaries) + woj + capitals + cities, data = df_model)
 df_model$resids <- resid(model1)
 plot(model1)
+summary(model1)
 ```
 
 ```{r}
@@ -148,7 +159,7 @@ powiats %>%
 
 ```{r}
 tm_shape(for_plot) +
-  tm_polygons(col = "resids", style = "jenks") +
+  tm_polygons(col = "resids", style = "jenks", midpoint = 0) +
   tm_shape(woj) + 
   tm_borders(lwd = 2)
 ```
