@@ -78,6 +78,25 @@ summary(g2)
 
 ```{r}
 grid_table <- expand.grid(A = seq(0, 15, 1), b = seq(0.1, 0.9, 0.1), c = seq(0.1, 0.9, 0.1), d = seq(0.1,0.9,0.1))
+
+grid_table$value <- apply(grid_table, 1, FUN = function(x) {
+  value  <- sum((power_df$output - x[1]*power_df$input1^x[2]*power_df$input2^x[3]*power_df$input3^x[4])^2)
+})
+
+starting_points <- as.list(grid_table[which.min(grid_table$value),c("A", "b", "c", "d")])
+
+hist(log(grid_table$value), breaks = "fd")
+
+starting_points
+```
+
+```{r}
+g3 <- nls(formula = output ~ A*input1^b*input2^c*input3^d,
+          data = power_df,
+          start = starting_points, 
+          control = nls.control(maxiter = 100))
+
+summary(g3)
 ```
 
 ```{r}
