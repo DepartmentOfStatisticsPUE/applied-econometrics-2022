@@ -6,15 +6,20 @@ output: html_notebook
 Topics:
 
 1. marginal effects -- margins
-2. robust / resistance regression -- robustbase
+
+2. robust / resistance regression -- robustbase 
+
+- infuential obs -- change slopes (parameters) / have sigificant effect on our estimates
+- outliers -- obs that have high / large residual but do not have effect on our estimates
+
 3. sample selection models -- sampleSelection
 4. spatial analysis tmap
 
 
 ```{r}
+install.packages("margins")
 install.packages("robustbase")
 install.packages("sampleSelection")
-install.packages("margins")
 install.packages("tmap")
 ```
 
@@ -33,6 +38,59 @@ library(sf)
 ```
 
 
+$$
+y = \beta_1 + \beta_2X_1 + \beta_3X_1X_2
+$$
+
+$$
+ME(X_1) = \beta_2 + \beta_3X_2
+$$
+$$
+ME_i(X_1) = \beta_2 + \beta_3X_{2i}
+$$
+
+AME -- average marginal effects
+
+$$
+\overline{ME_i(X_1)} = \frac{\sum_i \hat{\beta}_2 + \hat{\beta}_3X_{2i}}{n}
+$$
+
+MEM -- marginal effects at means
+
+$$
+ME_i(X_1) = \hat{\beta}_2 + \hat{\beta}_3\bar{X}_{2i}
+$$
+MER -- marginal effect at representative case
+
+
+$$
+ME_i(X_1) = \hat{\beta}_2 + \hat{\beta}_3X_{2{i=k}}
+$$
+```{r}
+head(mtcars)
+```
+
+a*b = a + b + a:b
+
+```{r}
+ggplot(data = mtcars, aes(x = wt, y = mpg, color = factor(am), group = factor(am))) + 
+  geom_point() +
+  geom_smooth(method = "lm", se = F)
+```
+
+```{r}
+example1 <- lm(formula = mpg ~ am + cyl + gear + wt + hp + am*hp + am*cyl + am*wt + am*gear,
+               data = mtcars)
+summary(example1)
+```
+
+
+```{r}
+margins(example1)
+summary(margins(example1))
+```
+
+
 ```{r}
 pzn_rent <- read_excel("data/rent-poznan.xlsx")
 
@@ -45,6 +103,7 @@ pzn_rent_subset <- pzn_rent %>%
   
 pzn_rent_subset
 ```
+
 ```{r}
 model_pzn <- lm(formula = price ~ flat_area + flat_rooms + individual + flat_furnished + 
                   flat_for_students +  flat_balcony,
@@ -52,39 +111,85 @@ model_pzn <- lm(formula = price ~ flat_area + flat_rooms + individual + flat_fur
 summary(model_pzn)
 plot(model_pzn)
 ```
+In order to verify whether given observation is influential the following approach is taken
+
+1. save estimated betas from the model based on the whole dataset
+2. remove i-th observation from the data and estimate parameters on a reduced dataset
+
+$$
+dfbetas_{k,-i} = \frac{\hat{\beta}_k - \hat{\beta}_{k,-i}}{se(\hat{\beta}_{k,-i})}
+$$
+
+
+```{r}
+ols_plot_dfbetas(model_pzn)
+```
+Cooks's distance mesure
 
 ```{r}
 ols_plot_cooksd_chart(model_pzn)
 ```
 
-```{r}
-ols_plot_dfbetas(model_pzn)
-```
+How can we deal with influential observations? 
+
+- remove them but what is the reason to remove some data from your analysis? 
+- use methods that are robust to influential observations
+
+The main difference between standard (non-robust)  and robust methods is the way how loss function is calculated. 
+
+- non-robust linear regression - non-weighted loss function (sum of squares)
+- robust linear regression -- weighted loss function (weighted sum of squares)
+
 
 ```{r}
-model_pzn_rob <- robustbase::lmrob(formula = price ~ flat_area + flat_rooms + individual + flat_furnished + 
-                               flat_for_students +  flat_balcony,
-                               data = pzn_rent_subset,
-                               method = "MM")
+model_pzn_rob <- lmrob(formula = price ~ flat_area + flat_rooms + individual + flat_furnished + 
+                                  flat_for_students +  flat_balcony,
+                       data = pzn_rent_subset,
+                       method = "MM")
 summary(model_pzn_rob)
 ```
 
 ```{r}
-plot(model_pzn_rob$model$price, model_pzn_rob$rweights)
+plot(x = model_pzn_rob$model$price, y = model_pzn_rob$rweights, xlab = "Price", ylab = "Weight (lmrob)")
 ```
-
-
 
 ```{r}
 data.frame(nonrobust = coef(model_pzn), robust = coef(model_pzn_rob))
 ```
 
+Econometricians often use  "robust" term to describe standard errors that are robust to HC or temporal correlation or clustering
+Statistican often use "robust" term to describe model that is robust to influential observations
+
+Post-hoc sensitivity analysis:
+
+- residual analysis -- mainly for standard errors but also for assumptions (e.g. linearity)
+- influential observations analysis -- how sensitive are the estimated parameters
+- omitted variable bias
+- variable selection methods -- LASSO, FOCI
+- selection bias
+
 
 Sample selection models:
 
-basic selection model: Heckman's model
-more advanced econometric models: copula selection models
-more statistical approach: not missing at random models
+1. basic selection model: Heckman's model
+2. more advanced econometric models: copula selection models
+3. more statistical approach: not missing at random models
+
+Model without selection bias (subset of people who are in the labour force)
+
+```{r}
+m_outcome <- lm(formula = wage ~ educ, data = Mroz87, subset  = lfp == 1)
+summary(m_outcome)
+```
+
+```{r}
+data(Mroz87)
+m <- selection(selection = lfp ~ educ + age + kids5 + kids618 + nwifeinc,
+               outcome  = wage  ~ educ, 
+               data = Mroz87, 
+               method = "ml")
+summary(m)
+```
 
 
 
@@ -133,7 +238,8 @@ df_model %>%
 ```
 
 ```{r}
-plot((df_model$salaries), (df_model$real))
+plot(log(df_model$salaries), log(df_model$real))
+cor((df_model$salaries), (df_model$real))
 ```
 
 ```{r}
